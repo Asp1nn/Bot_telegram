@@ -22,7 +22,8 @@ def parse_homework_status(homework):
     elif homework['status'] == 'reviewing':
         verdict = 'Ревьюер взял работу на проверку.'
     else:
-        verdict = 'Ревьюеру всё понравилось, можно приступать к следующему уроку.'
+        verdict = ('Ревьюеру всё понравилось, '
+                   'можно приступать к следующему уроку.')
     return f'У вас проверили работу "{homework_name}"!\n\n{verdict}'
 
 
@@ -58,11 +59,19 @@ def main():
         try:
             new_homework = get_homework_statuses(current_timestamp)
             if new_homework.get('homeworks'):
-                message = parse_homework_status(new_homework.get('homeworks')[0])
+                message = parse_homework_status(
+                    new_homework.get('homeworks')[0]
+                )
                 send_message(message, bot)
-                send_message(parse_homework_status(new_homework.get('homeworks')[0]), bot)
+                send_message(
+                    parse_homework_status(new_homework.get('homeworks')[0]),
+                    bot
+                )
                 logging.info(f'Сообщение отправлено:\n«{message}»')
-            current_timestamp = new_homework.get('current_date', current_timestamp)
+            current_timestamp = new_homework.get(
+                'current_date',
+                current_timestamp
+            )
             time.sleep(1200)
 
         except Exception as e:
