@@ -18,7 +18,7 @@ CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 PRAKTIKUM_URL = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
 STATUS_DATA = {'rejected': 'К сожалению в работе нашлись ошибки.',
                'reviewing': 'Ревьюер взял работу на проверку.',
-               'approved': ('Ревьюеру всё понравилось, ' 
+               'approved': ('Ревьюеру всё понравилось, '
                             'можно приступать к следующему уроку.')}
 HEADERS = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
 
