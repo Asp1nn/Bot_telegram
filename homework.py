@@ -54,7 +54,7 @@ def get_homework_statuses(current_timestamp):
         raise ConnectionError(NETWORK_FAILURE.format(key=error))
     response_json = response.json()
     if (response_json.get('error') and
-       response_json.get('code')) in response_json:
+            response_json.get('code')) in response_json:
         raise RuntimeError(ERROR_MESSAGE_TEMPLATE.format(
             error=response_json.get('error'),
             code=response_json.get('code'),
