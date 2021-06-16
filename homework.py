@@ -1,12 +1,10 @@
 import os
 import time
 import logging
-from json import JSONDecodeError
 
 import requests
 from dotenv import load_dotenv
-from requests.exceptions import Timeout, SSLError, ConnectionError
-from requests.exceptions import RequestException
+from requests.exceptions import ConnectionError
 from telegram import Bot
 
 load_dotenv()
@@ -16,20 +14,32 @@ PRAKTIKUM_TOKEN = os.getenv("PRAKTIKUM_TOKEN")
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 PRAKTIKUM_URL = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
-STATUS_DATA = {'rejected': 'К сожалению в работе нашлись ошибки.',
-               'reviewing': 'Ревьюер взял работу на проверку.',
-               'approved': ('Ревьюеру всё понравилось, '
-                            'можно приступать к следующему уроку.')}
+STATUS_VERDICTS = {'rejected': 'К сожалению в работе нашлись ошибки.',
+                   'reviewing': 'Ревьюер взял работу на проверку.',
+                   'approved': 'Ревьюеру всё понравилось, '
+                               'можно приступать к следующему уроку.'}
 HEADERS = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
+UNKNOWN_STATUS = 'Несуществующий статус проекта - {key}'
+STATUS_PROJECT = 'У вас проверили работу "{name}"!\n\n{verdict}'
+LOGGING_INFO = 'Сообщение отправлено:\n«{message}»'
+LOGGING_ERROR = 'Бот столкнулся с ошибкой: {error}'
+NETWORK_FAILURE = 'Произошел сбой сети в {key}'
+ERROR_MESSAGE_TEMPLATE = ('Отказ сервера: {error}, '
+                          'ключи ответа: {code}, '
+                          'статус ответа: {status}, '
+                          'параметры запроса {params}, '
+                          'запрос по урлу: {url}, '
+                          'заголовок: {headers}')
 
 
 def parse_homework_status(homework):
-    homework_name = homework['homework_name']
     status = homework['status']
-    if status not in STATUS_DATA:
-        raise ValueError(f'Несуществующий статус проекта - {status}')
-    verdict = STATUS_DATA[status]
-    return f'У вас проверили работу "{homework_name}"!\n\n{verdict}'
+    if status not in STATUS_VERDICTS:
+        raise ValueError(UNKNOWN_STATUS.format(key=status))
+    return STATUS_PROJECT.format(
+        name=homework['homework_name'],
+        verdict=STATUS_VERDICTS[status]
+    )
 
 
 def get_homework_statuses(current_timestamp):
@@ -40,10 +50,20 @@ def get_homework_statuses(current_timestamp):
             headers=HEADERS,
             params=date
         )
-    except (Timeout, SSLError, ConnectionError, OSError,
-            RequestException, JSONDecodeError):
-        raise
-    return response.json()
+    except requests.RequestException as error:
+        raise ConnectionError(NETWORK_FAILURE.format(key=error))
+    response_json = response.json()
+    if (response_json.get('error') and
+       response_json.get('code')) in response_json:
+        raise RuntimeError(ERROR_MESSAGE_TEMPLATE.format(
+            error=response_json.get('error'),
+            code=response_json.get('code'),
+            status=response.status_code,
+            params=date,
+            url=PRAKTIKUM_URL,
+            headers=HEADERS
+        ))
+    return response_json
 
 
 def send_message(message, bot_client):
@@ -61,7 +81,7 @@ def main():
                     new_homework.get('homeworks')[0]
                 )
                 send_message(message, bot)
-                logging.info(f'Сообщение отправлено:\n«{message}»')
+                logging.info(LOGGING_INFO.format(message=message))
             current_timestamp = new_homework.get(
                 'current_date',
                 current_timestamp
@@ -69,7 +89,7 @@ def main():
             time.sleep(1200)
 
         except Exception as error:
-            logging.error(f'Бот столкнулся с ошибкой: {error}', exc_info=True)
+            logging.error(LOGGING_ERROR.format(error=error), exc_info=True)
             time.sleep(1200)
 
 
