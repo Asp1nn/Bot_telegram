@@ -4,7 +4,6 @@ import logging
 
 import requests
 from dotenv import load_dotenv
-from requests.exceptions import ConnectionError
 from telegram import Bot
 
 load_dotenv()
@@ -19,14 +18,16 @@ STATUS_VERDICTS = {'rejected': 'К сожалению в работе нашли
                    'approved': 'Ревьюеру всё понравилось, '
                                'можно приступать к следующему уроку.'}
 HEADERS = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
-UNKNOWN_STATUS = 'Несуществующий статус проекта - {key}'
+UNKNOWN_STATUS = 'Неизвестный статус проекта - {key}'
 STATUS_PROJECT = 'У вас проверили работу "{name}"!\n\n{verdict}'
 LOGGING_INFO = 'Сообщение отправлено:\n«{message}»'
 LOGGING_ERROR = 'Бот столкнулся с ошибкой: {error}'
-NETWORK_FAILURE = 'Произошел сбой сети в {key}'
-ERROR_MESSAGE_TEMPLATE = ('Отказ сервера: {error}, '
-                          'ключи ответа: {code}, '
-                          'статус ответа: {status}, '
+NETWORK_FAILURE = ('Произошел сбой сети в {key}, '
+                   'параметры запроса {params}, '
+                   'запрос по урлу: {url}, '
+                   'заголовок: {headers}')
+ERROR_MESSAGE_TEMPLATE = ('Ошибка сервера {key}: {error}, '
+                          'ключи ответа: {code}'
                           'параметры запроса {params}, '
                           'запрос по урлу: {url}, '
                           'заголовок: {headers}')
@@ -51,18 +52,23 @@ def get_homework_statuses(current_timestamp):
             params=date
         )
     except requests.RequestException as error:
-        raise ConnectionError(NETWORK_FAILURE.format(key=error))
-    response_json = response.json()
-    if (response_json.get('error')
-       and response_json.get('code')) in response_json:
-        raise RuntimeError(ERROR_MESSAGE_TEMPLATE.format(
-            error=response_json.get('error'),
-            code=response_json.get('code'),
-            status=response.status_code,
-            params=date,
+        raise ConnectionError(NETWORK_FAILURE.format(
+            key=error,
             url=PRAKTIKUM_URL,
-            headers=HEADERS
+            headers=HEADERS,
+            params=date
         ))
+    response_json = response.json()
+    for key in ('error', 'code'):
+        if key in response_json:
+            raise RuntimeError(ERROR_MESSAGE_TEMPLATE.format(
+                key=key,
+                error=response_json[key],
+                code=response_json[key],
+                params=date,
+                url=PRAKTIKUM_URL,
+                headers=HEADERS
+            ))
     return response_json
 
 
