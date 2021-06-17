@@ -27,7 +27,6 @@ NETWORK_FAILURE = ('Произошел сбой сети в {key}, '
                    'запрос по урлу: {url}, '
                    'заголовок: {headers}')
 ERROR_MESSAGE_TEMPLATE = ('Ошибка сервера {key}: {error}, '
-                          'ключи ответа: {code}'
                           'параметры запроса {params}, '
                           'запрос по урлу: {url}, '
                           'заголовок: {headers}')
@@ -64,7 +63,6 @@ def get_homework_statuses(current_timestamp):
             raise RuntimeError(ERROR_MESSAGE_TEMPLATE.format(
                 key=key,
                 error=response_json[key],
-                code=response_json[key],
                 params=date,
                 url=PRAKTIKUM_URL,
                 headers=HEADERS
